@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coworking Booking System</title>
+    
+    <!-- Font Awesome для іконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Наші CSS файли -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Бокове меню -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Coworking<span>Space</span></h2>
+                <button class="close-sidebar" id="closeSidebar"><i class="fas fa-times"></i></button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active" data-page="dashboard">
+                        <a href="#dashboard"><i class="fas fa-home"></i> <span>Дашборд</span></a>
+                    </li>
+                    <li data-page="workspaces">
+                        <a href="#workspaces"><i class="fas fa-chair"></i> <span>Робочі місця</span></a>
+                    </li>
+                    <li data-page="bookings">
+                        <a href="#bookings"><i class="fas fa-calendar-check"></i> <span>Бронювання</span></a>
+                    </li>
+                    <li data-page="subscriptions">
+                        <a href="#subscriptions"><i class="fas fa-ticket-alt"></i> <span>Абонементи</span></a>
+                    </li>
+                    <li data-page="users">
+                        <a href="#users"><i class="fas fa-users"></i> <span>Користувачі</span></a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <div>
+                        <p class="user-name">Гість</p>
+                        <p class="user-role">Система бронювання</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Основний контент -->
+        <main class="main-content">
+            <!-- Верхній хедер -->
+            <header class="main-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 id="pageTitle">Дашборд</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="createNewBtn">
+                        <i class="fas fa-plus"></i> <span>Створити</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Контейнер для контенту сторінок -->
+            <div class="content-wrapper" id="contentWrapper">
+                <!-- Контент буде завантажуватись динамічно -->
+                <div class="loading-spinner">
+                    <i class="fas fa-circle-notch fa-spin"></i> Завантаження...
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальні вікна -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Динамічний контент модалки -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCancel">Скасувати</button>
+                <button class="btn btn-primary" id="modalConfirm">Підтвердити</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast-сповіщення -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Підключення JS -->
+    <script src="script/utils.js"></script>
+    <script src="script/api.js"></script>
+    <script src="script/components/users.js"></script>
+    <script src="script/components/workspaces.js"></script>
+    <script src="script/components/bookings.js"></script>
+    <script src="script/components/subscriptions.js"></script>
+    <script src="script/app.js"></script>
+</body>
+</html>
