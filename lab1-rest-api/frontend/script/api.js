@@ -169,8 +169,12 @@ class SubscriptionsAPI extends ApiClient {
         return response.data;
     }
 
-    async create(userId) {
-        const response = await this.post('/subscriptions', { user_id: userId });
+    async create(userId, price, months = 1) {
+        const response = await this.post('/subscriptions', { 
+            user_id: userId,
+            price: price,
+            months: months
+        });
         return response.data;
     }
 }

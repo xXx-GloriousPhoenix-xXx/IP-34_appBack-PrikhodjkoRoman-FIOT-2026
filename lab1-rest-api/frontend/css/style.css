@@ -58,8 +58,8 @@ body {
 }
 
 .sidebar-header h2 span {
-    font-weight: 300;
     color: #ffd700;
+    margin-left: 0.25rem;
 }
 
 .close-sidebar {

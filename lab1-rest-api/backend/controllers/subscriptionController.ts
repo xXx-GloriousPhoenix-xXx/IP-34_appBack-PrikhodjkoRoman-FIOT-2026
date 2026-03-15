@@ -6,7 +6,7 @@ export class SubscriptionController {
 
     createSubscription = (req: Request, res: Response): void => {
         try {
-            const { user_id, price } = req.body;
+            const { user_id, price, months } = req.body;
 
             if (!user_id || !price) {
                 res.status(400).json({
@@ -32,7 +32,15 @@ export class SubscriptionController {
                 return;
             }
 
-            const subscription = this.subscriptionService.createSubscription({ user_id, price });
+            if (typeof months !== 'number' || months <= 1) {
+                res.status(400).json({
+                    success: false,
+                    error: 'months має бути числом більшим за 1'
+                });
+                return;
+            }
+
+            const subscription = this.subscriptionService.createSubscription({ user_id, price, months });
             res.status(201).json({
                 success: true,
                 data: subscription

@@ -35,7 +35,7 @@ export class SubscriptionService {
         // 4. Створення абонемента
         const now = new Date();
         const expiryDate = new Date(now);
-        expiryDate.setDate(expiryDate.getDate() + 30); // +30 днів
+        expiryDate.setDate(expiryDate.getDate() + 30 * data.months);
 
         const subscription: SubscriptionEntity = {
             id: uuidv4(),
