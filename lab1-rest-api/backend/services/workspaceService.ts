@@ -1,52 +1,48 @@
-import type { WorkspaceEntity } from "../entities/workspaceEntity.ts";
-import type { CreateWorkspaceModel } from "../models/createWorkspaceModel.ts";
-import { v4 as uuidv4 } from 'uuid';
+import type { WorkspaceEntity } from '../entities/workspaceEntity.js';
+import type { CreateWorkspaceModel } from '../models/createWorkspaceModel.js';
+import { WorkspaceModel } from '../database/index.js';
 
 export class WorkspaceService {
-    private workspaces: Map<string, WorkspaceEntity> = new Map();
 
-    createWorkspace(data: CreateWorkspaceModel): WorkspaceEntity {
-        // Валідація ціни
+    async createWorkspace(data: CreateWorkspaceModel): Promise<WorkspaceEntity> {
         if (data.price_per_hour <= 0) {
-            throw new Error("Ціна повинна бути більше 0");
+            throw new Error('Ціна повинна бути більше 0');
         }
-
-        // Валідація місткості
         if (data.capacity <= 0) {
-            throw new Error("Місткість повинна бути більше 0");
+            throw new Error('Місткість повинна бути більше 0');
         }
 
-        const workspace: WorkspaceEntity = {
-            id: uuidv4(),
+        const workspace = await WorkspaceModel.create({
             name: data.name,
             type: data.type,
             capacity: data.capacity,
             price_per_hour: data.price_per_hour,
-            is_active: true
-        };
+        });
 
-        this.workspaces.set(workspace.id, workspace);
-        return workspace;
+        return workspace.toJSON() as WorkspaceEntity;
     }
 
-    getWorkspaceById(id: string): WorkspaceEntity | undefined {
-        return this.workspaces.get(id);
+    async getWorkspaceById(id: string): Promise<WorkspaceEntity | null> {
+        const workspace = await WorkspaceModel.findByPk(id);
+        return workspace ? (workspace.toJSON() as WorkspaceEntity) : null;
     }
 
-    getAllWorkspaces(): WorkspaceEntity[] {
-        return Array.from(this.workspaces.values());
+    async getAllWorkspaces(): Promise<WorkspaceEntity[]> {
+        const workspaces = await WorkspaceModel.findAll();
+        return workspaces.map(w => w.toJSON() as WorkspaceEntity);
     }
 
-    getActiveWorkspaces(): WorkspaceEntity[] {
-        return Array.from(this.workspaces.values()).filter(w => w.is_active);
+    async getActiveWorkspaces(): Promise<WorkspaceEntity[]> {
+        const workspaces = await WorkspaceModel.findAll({ where: { is_active: true } });
+        return workspaces.map(w => w.toJSON() as WorkspaceEntity);
     }
 
-    updateWorkspaceStatus(id: string, isActive: boolean): WorkspaceEntity | undefined {
-        const workspace = this.workspaces.get(id);
-        if (workspace) {
-            workspace.is_active = isActive;
-            this.workspaces.set(id, workspace);
-        }
-        return workspace;
+    async updateWorkspaceStatus(id: string, isActive: boolean): Promise<WorkspaceEntity | null> {
+        const workspace = await WorkspaceModel.findByPk(id);
+        if (!workspace) return null;
+
+        workspace.is_active = isActive;
+        await workspace.save();
+        return workspace.toJSON() as WorkspaceEntity;
     }
 }

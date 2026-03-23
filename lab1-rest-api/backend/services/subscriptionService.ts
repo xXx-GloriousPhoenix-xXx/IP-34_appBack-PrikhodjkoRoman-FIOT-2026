@@ -1,102 +1,99 @@
+import { Op } from 'sequelize';
 import type { SubscriptionEntity } from '../entities/subscriptionEntity.js';
 import type { CreateSubscriptionModel } from '../models/createSubscriptionModel.js';
+import { SubscriptionModel } from '../database/index.js';
 import { UserService } from './userService.js';
-import { v4 as uuidv4 } from 'uuid';
-import { SubscriptionStatus } from "../utils/subscrriptionStatus.js";
+import { SubscriptionStatus } from '../utils/subscrriptionStatus.js';
 
 export class SubscriptionService {
-    private subscriptions: Map<string, SubscriptionEntity> = new Map();
-
     constructor(private userService: UserService) {}
 
-    createSubscription(data: CreateSubscriptionModel): SubscriptionEntity {
+    async createSubscription(data: CreateSubscriptionModel): Promise<SubscriptionEntity> {
         // 1. Перевірка існування користувача
-        const user = this.userService.getUserById(data.user_id);
-        if (!user) {
-            throw new Error("Користувача не знайдено");
-        }
+        const user = await this.userService.getUserById(data.user_id);
+        if (!user) throw new Error('Користувача не знайдено');
 
         // 2. БЛ: Перевірка наявності боргів
         if (user.has_debt) {
-            throw new Error("Неможливо оформити абонемент: є активні борги");
+            throw new Error('Неможливо оформити абонемент: є активні борги');
         }
 
         // 3. БЛ: Перевірка чи немає вже активного абонемента
-        const hasActiveSubscription = Array.from(this.subscriptions.values()).some(
-            sub => sub.user_id === data.user_id && 
-                   sub.status === SubscriptionStatus.active && 
-                   sub.expiry_date > new Date()
-        );
+        const hasActive = await SubscriptionModel.findOne({
+            where: {
+                user_id: data.user_id,
+                status: SubscriptionStatus.active,
+                expiry_date: { [Op.gt]: new Date() },
+            },
+        });
+        if (hasActive) throw new Error('Користувач вже має активний абонемент');
 
-        if (hasActiveSubscription) {
-            throw new Error("Користувач вже має активний абонемент");
-        }
-
-        // 4. Створення абонемента
+        // 4. Розрахунок терміну
         const now = new Date();
         const expiryDate = new Date(now);
         expiryDate.setDate(expiryDate.getDate() + 30 * data.months);
 
-        const subscription: SubscriptionEntity = {
-            id: uuidv4(),
+        const subscription = await SubscriptionModel.create({
             user_id: data.user_id,
-            purchase_date: now,
-            activation_date: now,
             expiry_date: expiryDate,
             price: data.price,
-            is_active: true,
-            status: SubscriptionStatus.active
-        };
+            status: SubscriptionStatus.active,
+        });
 
-        this.subscriptions.set(subscription.id, subscription);
-        return subscription;
+        return subscription.toJSON() as SubscriptionEntity;
     }
 
     // БЛ: Щоденне оновлення статусів абонементів
-    updateSubscriptionsStatus(): void {
+    async updateSubscriptionsStatus(): Promise<void> {
         const now = new Date();
-        
-        Array.from(this.subscriptions.values()).forEach(subscription => {
-            if (subscription.status === SubscriptionStatus.active) {
-                // Перевірка терміну дії
-                if (now > subscription.expiry_date) {
-                    subscription.status = SubscriptionStatus.expired;
-                    subscription.is_active = false;
-                    this.subscriptions.set(subscription.id, subscription);
-                }
+
+        await SubscriptionModel.update(
+            { status: SubscriptionStatus.expired, is_active: false },
+            {
+                where: {
+                    status: SubscriptionStatus.active,
+                    expiry_date: { [Op.lt]: now },
+                },
             }
-        });
-    }
-
-    // БЛ: Блокування абонементу через борги
-    blockSubscription(userId: string): void {
-        const activeSubscription = this.getActiveUserSubscription(userId);
-        
-        if (activeSubscription) {
-            activeSubscription.status = SubscriptionStatus.blocked;
-            activeSubscription.is_active = false;
-            this.subscriptions.set(activeSubscription.id, activeSubscription);
-        }
-    }
-
-    getSubscriptionById(id: string): SubscriptionEntity | undefined {
-        return this.subscriptions.get(id);
-    }
-
-    getUserSubscriptions(userId: string): SubscriptionEntity[] {
-        return Array.from(this.subscriptions.values()).filter(s => s.user_id === userId);
-    }
-
-    getActiveUserSubscription(userId: string): SubscriptionEntity | undefined {
-        const now = new Date();
-        return Array.from(this.subscriptions.values()).find(
-            s => s.user_id === userId && 
-                 s.status === SubscriptionStatus.active && 
-                 s.expiry_date > now
         );
     }
 
-    getAllSubscriptions(): SubscriptionEntity[] {
-        return Array.from(this.subscriptions.values());
+    // БЛ: Блокування абонементу через борги
+    async blockSubscription(userId: string): Promise<void> {
+        await SubscriptionModel.update(
+            { status: SubscriptionStatus.blocked, is_active: false },
+            {
+                where: {
+                    user_id: userId,
+                    status: SubscriptionStatus.active,
+                },
+            }
+        );
+    }
+
+    async getSubscriptionById(id: string): Promise<SubscriptionEntity | null> {
+        const sub = await SubscriptionModel.findByPk(id);
+        return sub ? (sub.toJSON() as SubscriptionEntity) : null;
+    }
+
+    async getUserSubscriptions(userId: string): Promise<SubscriptionEntity[]> {
+        const subs = await SubscriptionModel.findAll({ where: { user_id: userId } });
+        return subs.map(s => s.toJSON() as SubscriptionEntity);
+    }
+
+    async getActiveUserSubscription(userId: string): Promise<SubscriptionEntity | null> {
+        const sub = await SubscriptionModel.findOne({
+            where: {
+                user_id: userId,
+                status: SubscriptionStatus.active,
+                expiry_date: { [Op.gt]: new Date() },
+            },
+        });
+        return sub ? (sub.toJSON() as SubscriptionEntity) : null;
+    }
+
+    async getAllSubscriptions(): Promise<SubscriptionEntity[]> {
+        const subs = await SubscriptionModel.findAll();
+        return subs.map(s => s.toJSON() as SubscriptionEntity);
     }
 }

@@ -1,5 +1,5 @@
 export enum SubscriptionStatus {
-    active,
-    expired,
-    blocked
+    active = 'active',
+    expired = 'expired',
+    blocked = 'blocked'
 };

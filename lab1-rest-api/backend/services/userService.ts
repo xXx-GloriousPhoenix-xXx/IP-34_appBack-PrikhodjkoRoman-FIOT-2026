@@ -1,50 +1,47 @@
-import type { UserEntity } from "../entities/userEntity.ts";
-import type { CreateUserModel } from "../models/createUserModel.ts";
-import { v4 as uuidv4 } from 'uuid';
+import type { UserEntity } from '../entities/userEntity.js';
+import type { CreateUserModel } from '../models/createUserModel.js';
+import { UserModel } from '../database/index.js';
 
 export class UserService {
-    private users: Map<string, UserEntity> = new Map();
 
-    createUser(data: CreateUserModel): UserEntity {
+    async createUser(data: CreateUserModel): Promise<UserEntity> {
         // Перевірка віку (бізнес-логіка: мінімальний вік для реєстрації - 16 років)
         if (data.age < 16) {
-            throw new Error("Користувач повинен бути старше 16 років");
+            throw new Error('Користувач повинен бути старше 16 років');
         }
 
         // Перевірка email на унікальність
-        const existingUser = Array.from(this.users.values()).find(u => u.email === data.email);
+        const existingUser = await UserModel.findOne({ where: { email: data.email } });
         if (existingUser) {
-            throw new Error("Користувач з таким email вже існує");
+            throw new Error('Користувач з таким email вже існує');
         }
 
-        const user: UserEntity = {
-            id: uuidv4(),
+        const user = await UserModel.create({
             full_name: data.full_name,
             email: data.email,
             phone: data.phone,
             age: data.age,
-            registration_date: new Date(),
-            has_debt: false
-        };
+        });
 
-        this.users.set(user.id, user);
-        return user;
+        return user.toJSON() as UserEntity;
     }
 
-    getUserById(id: string): UserEntity | undefined {
-        return this.users.get(id);
+    async getUserById(id: string): Promise<UserEntity | null> {
+        const user = await UserModel.findByPk(id);
+        return user ? (user.toJSON() as UserEntity) : null;
     }
 
-    getAllUsers(): UserEntity[] {
-        return Array.from(this.users.values());
+    async getAllUsers(): Promise<UserEntity[]> {
+        const users = await UserModel.findAll();
+        return users.map(u => u.toJSON() as UserEntity);
     }
 
-    updateUserDebt(id: string, hasDebt: boolean): UserEntity | undefined {
-        const user = this.users.get(id);
-        if (user) {
-            user.has_debt = hasDebt;
-            this.users.set(id, user);
-        }
-        return user;
+    async updateUserDebt(id: string, hasDebt: boolean): Promise<UserEntity | null> {
+        const user = await UserModel.findByPk(id);
+        if (!user) return null;
+
+        user.has_debt = hasDebt;
+        await user.save();
+        return user.toJSON() as UserEntity;
     }
 }

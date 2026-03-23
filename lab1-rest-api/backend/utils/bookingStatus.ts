@@ -1,6 +1,6 @@
 export enum BookingStatus {
-    active,
-    cancelled,
-    completed,
-    unpaid
+    active = 'active',
+    cancelled = 'cancelled',
+    completed = 'completed',
+    unpaid = 'unpaid'
 };

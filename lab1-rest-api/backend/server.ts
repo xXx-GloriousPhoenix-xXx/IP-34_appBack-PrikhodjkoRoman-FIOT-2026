@@ -7,6 +7,9 @@ import swaggerUi from 'swagger-ui-express';
 // Імпорт Swagger конфігурації
 import swaggerSpec from './swagger/swagger.config.js';
 
+// Імпорт бази даних
+import { initDatabase } from './database/index.js';
+
 // Імпорт сервісів
 import { UserService } from './services/userService.js';
 import { WorkspaceService } from './services/workspaceService.js';
@@ -60,7 +63,6 @@ export class Server {
         this.setupMiddleware();
         this.setupSwagger();
         this.setupRoutes();
-        this.setupBackgroundJobs();
     }
 
     private setupMiddleware(): void {
@@ -68,7 +70,7 @@ export class Server {
         this.app.use(cors());
         this.app.use(morgan('dev'));
         this.app.use(express.json());
-        
+
         // Логування всіх запитів
         this.app.use((req, _res, next) => {
             console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
@@ -77,7 +79,6 @@ export class Server {
     }
 
     private setupSwagger(): void {
-        // Swagger сторінка
         this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
             explorer: true,
             customCss: '.swagger-ui .topbar { display: none }',
@@ -85,7 +86,6 @@ export class Server {
             customfavIcon: '/favicon.ico'
         }));
 
-        // Swagger JSON
         this.app.get('/api-docs.json', (_req, res) => {
             res.setHeader('Content-Type', 'application/json');
             res.send(swaggerSpec);
@@ -93,7 +93,6 @@ export class Server {
     }
 
     private setupRoutes(): void {
-        // Головний роут для перевірки API
         this.app.get('/', (_req, res) => {
             res.json({
                 success: true,
@@ -108,7 +107,6 @@ export class Server {
             });
         });
 
-        // API роути
         this.app.use('/api/users', createUserRouter(this.userController));
         this.app.use('/api/workspaces', createWorkspaceRouter(this.workspaceController));
         this.app.use('/api/bookings', createBookingRouter(this.bookingController));
@@ -123,32 +121,29 @@ export class Server {
         });
     }
 
+    // Фонові задачі — запускаються тільки після старту сервера
     private setupBackgroundJobs(): void {
         // Запускаємо перевірки кожну годину
-        setInterval(() => {
+        setInterval(async () => {
             console.log(`[${new Date().toISOString()}] Запуск фонових перевірок...`);
-            
-            // Скасування прострочених бронювань (не сплачені > 48 годин)
-            this.bookingService.cancelOverdueBookings();
-            
-            // Завершення активних бронювань (час вийшов)
-            this.bookingService.completeExpiredBookings();
-            
-            // Оновлення статусів абонементів (прострочені)
-            this.subscriptionService.updateSubscriptionsStatus();
-            
+            await this.bookingService.cancelOverdueBookings();
+            await this.bookingService.completeExpiredBookings();
+            await this.subscriptionService.updateSubscriptionsStatus();
             console.log(`[${new Date().toISOString()}] Фонові перевірки завершено`);
-        }, 60 * 60 * 1000); // Кожну годину
+        }, 60 * 60 * 1000);
 
-        // Також запускаємо при старті сервера для синхронізації
-        setTimeout(() => {
-            this.bookingService.cancelOverdueBookings();
-            this.bookingService.completeExpiredBookings();
-            this.subscriptionService.updateSubscriptionsStatus();
+        // Синхронізація при старті — невелика затримка щоб сервер встиг піднятись
+        setTimeout(async () => {
+            await this.bookingService.cancelOverdueBookings();
+            await this.bookingService.completeExpiredBookings();
+            await this.subscriptionService.updateSubscriptionsStatus();
         }, 5000);
     }
 
-    public start(): void {
+    // start() тепер async — спочатку БД, потім listen
+    public async start(): Promise<void> {
+        await initDatabase();
+
         this.app.listen(this.port, () => {
             console.log(`\nСервер запущено на порту ${this.port}`);
             console.log(`http://localhost:${this.port}`);
@@ -163,9 +158,11 @@ export class Server {
             console.log(`   POST /api/bookings/:id/pay - оплатити бронювання`);
             console.log(`   POST /api/subscriptions - оформити абонемент`);
         });
+
+        // Фонові задачі стартують після того як сервер підняв порт
+        this.setupBackgroundJobs();
     }
 
-    // Для graceful shutdown
     public stop(): void {
         console.log('Зупинка сервера...');
         process.exit(0);
