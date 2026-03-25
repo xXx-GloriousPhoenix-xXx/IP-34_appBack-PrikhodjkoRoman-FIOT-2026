@@ -21,7 +21,6 @@ body {
 /* Sidebar */
 .sidebar {
     width: 280px;
-    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
     background-color: rgb(103, 123, 230);
 
     color: white;
@@ -184,7 +183,6 @@ body {
 }
 
 .btn-primary {
-    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
     background-color: rgb(103, 123, 230);
 
     color: white;
@@ -249,7 +247,6 @@ body {
 }
 
 .data-table thead {
-    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
     background-color: rgb(103, 123, 230);
     color: white;
 }
@@ -272,7 +269,7 @@ body {
 .status-badge {
     padding: 5px 10px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: 0.65rem;
     font-weight: 500;
 }
 

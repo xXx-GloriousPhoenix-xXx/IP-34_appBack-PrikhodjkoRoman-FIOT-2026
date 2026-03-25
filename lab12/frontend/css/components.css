@@ -144,7 +144,6 @@
 }
 
 .stat-card {
-    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
     background-color: rgb(103, 123, 230);
 
     color: white;
@@ -153,6 +152,16 @@
     display: flex;
     align-items: center;
     gap: 20px;
+}
+
+.recent-booking-item {
+    display: flex;
+    width: fit-content;
+    align-items: center;
+    border-radius: 0.75em;
+    gap: 1em;
+    padding: 1em;
+    background-color: rgb(103, 123, 230);
 }
 
 .stat-icon {
@@ -165,6 +174,30 @@
     font-weight: 400;
     opacity: 0.9;
     margin-bottom: 5px;
+}
+
+.dashboard-section {
+    margin-top: 1.5em;
+}
+
+.dashboard-section > *:first-child {
+    margin-bottom: 0.5em;
+}
+
+.popular-workspaces {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 1em;
+}
+
+.popular-workspace-item {
+    display: flex;
+    flex: 1 0 1;
+    width: fit-content;
+    flex-flow: column nowrap;
+    background-color: rgb(103, 123, 230);
+    padding: 1em;
+    border-radius: 0.75em;
 }
 
 .stat-number {
