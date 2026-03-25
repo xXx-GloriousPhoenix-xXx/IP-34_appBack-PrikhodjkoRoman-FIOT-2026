@@ -1,6 +1,6 @@
 // Базовий клас для API запитів
 class ApiClient {
-    constructor(baseURL = 'http://localhost:10000/api') {
+    constructor(baseURL = 'https://bookingsystemapp.onrender.com/api') {
         this.baseURL = baseURL;
     }
 
