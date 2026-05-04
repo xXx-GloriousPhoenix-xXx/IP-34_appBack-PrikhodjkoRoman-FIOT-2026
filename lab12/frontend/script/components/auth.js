@@ -1,49 +1,45 @@
 const AuthComponent = {
-    // Состояние компонента: 'login' или 'register'
     mode: 'login',
 
     async render() {
         return `
-            <div class="auth-screen" style="
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                min-height: calc(100vh - 80px);
-                width: 100%;
-                font-size: 0.8em;
-            ">
-                <div class="auth-container" style="width: 100%; max-width: 400px;">
+            <div class="auth-screen" style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 80px); width: 100%;">
+                <div class="auth-container" style="width: 100%; max-width: 400px; padding: 20px;">
                     <div class="card">
                         <div class="card-header" style="text-align: center; margin-bottom: 20px;">
-                            <h2 id="authTitle">${this.mode === 'login' ? 'Вхід в систему' : 'Реєстрація'}</h2>
+                            <h2>${this.mode === 'login' ? 'Вхід в систему' : 'Реєстрація'}</h2>
                             <p style="color: #718096;">${this.mode === 'login' ? 'Введіть свої дані для доступу' : 'Створіть новий аккаунт'}</p>
                         </div>
                         
                         <form id="authForm">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="email">Email *</label>
+                                <input type="email" name="email" id="email" class="form-control" placeholder="example@mail.com" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="password">Пароль *</label>
+                                <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            </div>
+
                             ${this.mode === 'register' ? `
                                 <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="confirm_password">Підтвердіть пароль *</label>
+                                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="••••••••" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 15px;">
                                     <label for="full_name">Повне ім'я *</label>
-                                    <input type="text" id="full_name" class="form-control" placeholder="Іван Іванов" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <input type="text" name="full_name" id="full_name" class="form-control" placeholder="Іван Іванов" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 15px;">
                                     <label for="age">Вік *</label>
-                                    <input type="number" id="age" class="form-control" placeholder="25" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <input type="number" name="age" id="age" class="form-control" placeholder="18" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 </div>
-                                <div class="form-group" style="margin-bottom: 15px;">
+                                <div class="form-group" style="margin-bottom: 20px;">
                                     <label for="phone">Телефон *</label>
-                                    <input type="tel" id="phone" class="form-control" placeholder="+380..." required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <input type="tel" name="phone" id="phone" class="form-control" placeholder="+380..." required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 </div>
                             ` : ''}
-                            
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="email">Email *</label>
-                                <input type="email" id="email" class="form-control" placeholder="example@mail.com" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                <label for="password">Пароль *</label>
-                                <input type="password" id="password" class="form-control" placeholder="••••••••" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                            </div>
     
                             <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px;">
                                 <i class="fas fa-sign-in-alt"></i> 
@@ -70,7 +66,6 @@ const AuthComponent = {
             toggleBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.mode = this.mode === 'login' ? 'register' : 'login';
-                // Перерендериваем компонент в основном контейнере
                 App.renderCurrentPage(); 
             });
         }
@@ -79,41 +74,50 @@ const AuthComponent = {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                const formData = {
-                    email: form.email.value,
-                    password: form.password.value
-                };
+                const email = form.email.value.trim();
+                const password = form.password.value;
 
                 if (this.mode === 'register') {
-                    formData.full_name = form.full_name.value;
-                    formData.phone = form.phone.value;
+                    const confirmPassword = form.confirm_password.value;
+                    const age = Number(form.age.value);
+
+                    if (password !== confirmPassword) {
+                        Toast.error('Паролі не співпадають!');
+                        return;
+                    }
+
+                    // Валидация возраста
+                    if (age < 1 || age > 120) {
+                        Toast.error('Будь ласка, вкажіть коректний вік');
+                        return;
+                    }
+                }
+
+                const formData = { email, password };
+
+                if (this.mode === 'register') {
+                    formData.full_name = form.full_name.value.trim();
+                    formData.phone = form.phone.value.trim();
                     formData.age = Number(form.age.value);
                 }
 
                 try {
-                    let response;
                     if (this.mode === 'login') {
-                        response = await api.auth.login(formData);
-                        
-                        // ВАЖНО: данные лежат в response.data
+                        const response = await api.auth.login(formData);
                         const { token, user } = response.data; 
 
                         Toast.success('Вітаємо, ' + user.full_name);
-                        
-                        // Зберігаємо дані з вкладеного об'єкта data
                         localStorage.setItem('token', token);
                         localStorage.setItem('user', JSON.stringify(user));
-
                         window.location.hash = '#dashboard';
                     } else {
-                        // Для регистрации сервер тоже возвращает { success: true, data: ... }
                         await api.auth.register(formData);
                         Toast.success('Реєстрація успішна! Тепер увійдіть.');
                         this.mode = 'login';
                         App.renderCurrentPage();
                     }
                 } catch (error) {
-                    Toast.error('Помилка: ' + error.message);
+                    Toast.error(error.message || 'Сталася помилка при авторизації');
                 }
             });
         }
