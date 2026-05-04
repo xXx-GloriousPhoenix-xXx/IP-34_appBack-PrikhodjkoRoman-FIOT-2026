@@ -10,8 +10,9 @@ const AuthComponent = {
                 justify-content: center; 
                 min-height: calc(100vh - 80px);
                 width: 100%;
+                font-size: 0.8em;
             ">
-                <div class="auth-container" style="width: 100%; max-width: 400px; padding: 20px;">
+                <div class="auth-container" style="width: 100%; max-width: 400px;">
                     <div class="card">
                         <div class="card-header" style="text-align: center; margin-bottom: 20px;">
                             <h2 id="authTitle">${this.mode === 'login' ? 'Вхід в систему' : 'Реєстрація'}</h2>
@@ -25,8 +26,12 @@ const AuthComponent = {
                                     <input type="text" id="full_name" class="form-control" placeholder="Іван Іванов" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 15px;">
-                                    <label for="phone">Телефон</label>
-                                    <input type="tel" id="phone" class="form-control" placeholder="+380..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <label for="age">Вік *</label>
+                                    <input type="number" id="age" class="form-control" placeholder="25" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label for="phone">Телефон *</label>
+                                    <input type="tel" id="phone" class="form-control" placeholder="+380..." required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 </div>
                             ` : ''}
                             
@@ -82,6 +87,7 @@ const AuthComponent = {
                 if (this.mode === 'register') {
                     formData.full_name = form.full_name.value;
                     formData.phone = form.phone.value;
+                    formData.age = Number(form.age.value);
                 }
 
                 try {
