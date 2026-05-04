@@ -4,61 +4,60 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 
-// Імпорт Swagger конфігурації
 import swaggerSpec from './swagger/swagger.config.js';
-
-// Імпорт бази даних
 import { initDatabase } from './database/index.js';
 
-// Імпорт сервісів
 import { UserService } from './services/userService.js';
 import { WorkspaceService } from './services/workspaceService.js';
 import { BookingService } from './services/bookingService.js';
 import { SubscriptionService } from './services/subscriptionService.js';
+import { AuthService } from './services/authService.js';
 
-// Імпорт контролерів
 import { UserController } from './controllers/userController.js';
 import { WorkspaceController } from './controllers/workspaceController.js';
 import { BookingController } from './controllers/bookingController.js';
 import { SubscriptionController } from './controllers/subscriptionController.js';
+import { AuthController } from './controllers/authController.js';
 
-// Імпорт роутів
 import { createUserRouter } from './routes/userRoutes.js';
 import { createWorkspaceRouter } from './routes/workspaceRoutes.js';
 import { createBookingRouter } from './routes/bookingRoutes.js';
 import { createSubscriptionRouter } from './routes/subscriptionRoutes.js';
+import { createAuthRouter } from './routes/authRoutes.js';
+
+import { authMiddleware } from './middleware/authMiddleware.js';
 
 export class Server {
     private app: Express;
     private port: number;
 
-    // Сервіси
     private userService: UserService;
     private workspaceService: WorkspaceService;
     private bookingService: BookingService;
     private subscriptionService: SubscriptionService;
+    private authService: AuthService;
 
-    // Контролери
     private userController: UserController;
     private workspaceController: WorkspaceController;
     private bookingController: BookingController;
     private subscriptionController: SubscriptionController;
+    private authController: AuthController;
 
     constructor(port: number = 10000) {
         this.port = port;
         this.app = express();
 
-        // Ініціалізація сервісів
         this.userService = new UserService();
         this.workspaceService = new WorkspaceService();
         this.bookingService = new BookingService(this.userService, this.workspaceService);
         this.subscriptionService = new SubscriptionService(this.userService);
+        this.authService = new AuthService(this.userService);
 
-        // Ініціалізація контролерів
         this.userController = new UserController(this.userService);
         this.workspaceController = new WorkspaceController(this.workspaceService);
         this.bookingController = new BookingController(this.bookingService);
         this.subscriptionController = new SubscriptionController(this.subscriptionService);
+        this.authController = new AuthController(this.authService);
 
         this.setupMiddleware();
         this.setupSwagger();
@@ -71,7 +70,6 @@ export class Server {
         this.app.use(morgan('dev'));
         this.app.use(express.json());
 
-        // Логування всіх запитів
         this.app.use((req, _res, next) => {
             console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
             next();
@@ -83,7 +81,6 @@ export class Server {
             explorer: true,
             customCss: '.swagger-ui .topbar { display: none }',
             customSiteTitle: 'Коворкінг API Документація',
-            customfavIcon: '/favicon.ico'
         }));
 
         this.app.get('/api-docs.json', (_req, res) => {
@@ -98,41 +95,32 @@ export class Server {
                 success: true,
                 message: 'Коворкінг API працює',
                 version: '1.0.0',
-                endpoints: {
-                    users: '/api/users',
-                    workspaces: '/api/workspaces',
-                    bookings: '/api/bookings',
-                    subscriptions: '/api/subscriptions'
-                }
             });
         });
 
-        this.app.use('/api/users', createUserRouter(this.userController));
-        this.app.use('/api/workspaces', createWorkspaceRouter(this.workspaceController));
-        this.app.use('/api/bookings', createBookingRouter(this.bookingController));
-        this.app.use('/api/subscriptions', createSubscriptionRouter(this.subscriptionController));
+        // ── Public routes ──────────────────────────────────────────────
+        this.app.use('/api/auth', createAuthRouter(this.authController));
 
-        // Обробка 404
+        // ── Protected routes (JWT required) ────────────────────────────
+        this.app.use('/api/users', authMiddleware, createUserRouter(this.userController));
+        this.app.use('/api/workspaces', authMiddleware, createWorkspaceRouter(this.workspaceController));
+        this.app.use('/api/bookings', authMiddleware, createBookingRouter(this.bookingController));
+        this.app.use('/api/subscriptions', authMiddleware, createSubscriptionRouter(this.subscriptionController));
+
+        // 404
         this.app.use((_req, res) => {
-            res.status(404).json({
-                success: false,
-                error: 'Шлях не знайдено'
-            });
+            res.status(404).json({ success: false, error: 'Шлях не знайдено' });
         });
     }
 
-    // Фонові задачі — запускаються тільки після старту сервера
     private setupBackgroundJobs(): void {
-        // Запускаємо перевірки кожну годину
         setInterval(async () => {
             console.log(`[${new Date().toISOString()}] Запуск фонових перевірок...`);
             await this.bookingService.cancelOverdueBookings();
             await this.bookingService.completeExpiredBookings();
             await this.subscriptionService.updateSubscriptionsStatus();
-            console.log(`[${new Date().toISOString()}] Фонові перевірки завершено`);
         }, 60 * 60 * 1000);
 
-        // Синхронізація при старті — невелика затримка щоб сервер встиг піднятись
         setTimeout(async () => {
             await this.bookingService.cancelOverdueBookings();
             await this.bookingService.completeExpiredBookings();
@@ -140,26 +128,19 @@ export class Server {
         }, 5000);
     }
 
-    // start() тепер async — спочатку БД, потім listen
     public async start(): Promise<void> {
         await initDatabase();
 
         this.app.listen(this.port, () => {
             console.log(`\nСервер запущено на порту ${this.port}`);
             console.log(`http://localhost:${this.port}`);
-            console.log(`\nДоступні ендпоінти:`);
-            console.log(`   GET  / - перевірка API`);
-            console.log(`   POST /api/users - створити користувача`);
-            console.log(`   GET  /api/users - всі користувачі`);
-            console.log(`   POST /api/workspaces - створити робоче місце`);
-            console.log(`   GET  /api/workspaces - всі робочі місця`);
-            console.log(`   POST /api/bookings - створити бронювання`);
-            console.log(`   POST /api/bookings/:id/cancel - скасувати бронювання`);
-            console.log(`   POST /api/bookings/:id/pay - оплатити бронювання`);
-            console.log(`   POST /api/subscriptions - оформити абонемент`);
+            console.log('\nПублічні ендпоінти:');
+            console.log('   POST /api/auth/register');
+            console.log('   POST /api/auth/login');
+            console.log('\nЗахищені ендпоінти (потрібен Bearer токен):');
+            console.log('   /api/users  /api/workspaces  /api/bookings  /api/subscriptions');
         });
 
-        // Фонові задачі стартують після того як сервер підняв порт
         this.setupBackgroundJobs();
     }
 
