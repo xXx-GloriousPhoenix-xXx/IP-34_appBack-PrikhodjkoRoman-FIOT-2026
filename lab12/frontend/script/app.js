@@ -1,9 +1,18 @@
 const App = {
     currentPage: 'dashboard',
-    
+
     init() {
         this.setupEventListeners();
-        this.loadPage('dashboard');
+        
+        // Проверяем авторизацию при старте
+        const isAuthenticated = !!localStorage.getItem('token');
+        if (!isAuthenticated) {
+            this.loadPage('login');
+        } else {
+            // Если авторизован, берем страницу из хэша или дашборд
+            const page = window.location.hash.substring(1) || 'dashboard';
+            this.loadPage(page);
+        }
     },
     
     setupEventListeners() {
@@ -42,9 +51,33 @@ const App = {
     
     async loadPage(page) {
         this.currentPage = page;
+        const isAuthenticated = !!localStorage.getItem('token');
+
+        // ЗАЩИТА: Если не авторизован и это не страница логина — кидаем на логин
+        if (!isAuthenticated && page !== 'login') {
+            window.location.hash = 'login';
+            return;
+        }
+
+        // Управление видимостью интерфейса
+        const sidebar = document.getElementById('sidebar');
+        const mainHeader = document.querySelector('.main-header');
+        const mainContent = document.querySelector('.main-content');
+
+        if (page === 'login') {
+            if (sidebar) sidebar.style.display = 'none';
+            if (mainHeader) mainHeader.style.display = 'none';
+            if (mainContent) mainContent.style.marginLeft = '0';
+        } else {
+            if (sidebar) sidebar.style.display = 'flex';
+            if (mainHeader) mainHeader.style.display = 'flex';
+            // Возвращаем отступ контента (подставь свой, если он отличается)
+            if (mainContent && window.innerWidth > 768) mainContent.style.marginLeft = '280px';
+        }
         
-        // Оновлюємо заголовок
+        // Обновляем заголовки
         const titles = {
+            'login': 'Авторизація',
             'dashboard': 'Дашборд',
             'workspaces': 'Робочі місця',
             'bookings': 'Бронювання',
@@ -54,16 +87,16 @@ const App = {
         
         document.getElementById('pageTitle').textContent = titles[page] || 'Дашборд';
         
-        // Оновлюємо активний пункт меню
-        document.querySelectorAll('.sidebar-nav li').forEach(li => {
-            li.classList.remove('active');
-        });
-        document.querySelector(`.sidebar-nav li[data-page="${page}"]`).classList.add('active');
+        // Обновляем активный пункт меню (только если не логин)
+        if (page !== 'login') {
+            document.querySelectorAll('.sidebar-nav li').forEach(li => {
+                li.classList.remove('active');
+                if (li.getAttribute('data-page') === page) li.classList.add('active');
+            });
+        }
         
-        // Оновлюємо URL хеш
         window.location.hash = page;
         
-        // Завантажуємо контент
         const contentWrapper = document.getElementById('contentWrapper');
         contentWrapper.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i> Завантаження...</div>';
         
@@ -71,32 +104,29 @@ const App = {
             let content = '';
             
             switch(page) {
+                case 'login':
+                    content = await AuthComponent.render();
+                    break;
                 case 'dashboard':
                     content = await this.renderDashboard();
                     break;
                 case 'workspaces':
                     content = await WorkspacesComponent.render();
                     break;
-                case 'bookings':
-                    content = await BookingsComponent.render();
-                    break;
-                case 'subscriptions':
-                    content = await SubscriptionsComponent.render();
-                    break;
-                case 'users':
-                    content = await UsersComponent.render();
-                    break;
-                default:
-                    content = '<div>Сторінку не знайдено</div>';
+                // ... твои остальные кейсы ...
             }
             
             contentWrapper.innerHTML = content;
             
-            // Ініціалізуємо компоненти після завантаження
-            this.initPageComponents(page);
+            // Инициализация
+            if (page === 'login') {
+                AuthComponent.init();
+            } else {
+                this.initPageComponents(page);
+            }
             
         } catch (error) {
-            contentWrapper.innerHTML = `<div class="error-message">Помилка завантаження: ${error.message}</div>`;
+            contentWrapper.innerHTML = `<div class="error-message">Помилка: ${error.message}</div>`;
         }
     },
     
@@ -293,6 +323,12 @@ const App = {
     
     renderCurrentPage() {
         this.loadPage(this.currentPage);
+    },
+
+    logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        this.loadPage('login');
     }
 };
 

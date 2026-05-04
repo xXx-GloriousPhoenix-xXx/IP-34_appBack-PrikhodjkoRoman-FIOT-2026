@@ -1,16 +1,17 @@
 import { sequelize } from './config.js';
 
-// Import all models to register them with Sequelize
 import './models/UserModel.js';
 import './models/WorkspaceModel.js';
-import './models/BookingModel.js';      // also registers associations
-import './models/SubscriptionModel.js'; // also registers associations
+import './models/BookingModel.js';      
+import './models/SubscriptionModel.js';
+import './models/AuthModel.js';
 
 export { sequelize };
 export { UserModel } from './models/UserModel.js';
 export { WorkspaceModel } from './models/WorkspaceModel.js';
 export { BookingModel } from './models/BookingModel.js';
 export { SubscriptionModel } from './models/SubscriptionModel.js';
+export { AuthModel } from './models/AuthModel.js';
 
 export async function initDatabase(): Promise<void> {
     await sequelize.authenticate();

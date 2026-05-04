@@ -1,4 +1,3 @@
-// Базовий клас для API запитів
 class ApiClient {
     constructor(baseURL = 'https://bookingsystemapp.onrender.com/api') {
         this.baseURL = baseURL;
@@ -7,23 +6,40 @@ class ApiClient {
     async request(endpoint, options = {}) {
         try {
             const url = `${this.baseURL}${endpoint}`;
+            
+            // Автоматически берем токен из хранилища
+            const token = localStorage.getItem('token');
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            // Если токен есть, добавляем его в заголовки
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
+                ...options,
+                headers
             });
 
             const data = await response.json();
 
             if (!response.ok) {
+                // Если сервер ответил 401 (Unauthorized), можно разлогинить пользователя
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    // window.location.hash = '#login'; // Опционально: редирект
+                }
                 throw new Error(data.error || 'Помилка запиту');
             }
 
             return data;
         } catch (error) {
-            Toast.error(error.message);
+            // Toast.error(error.message); // У тебя это уже есть
             throw error;
         }
     }
@@ -57,7 +73,6 @@ class ApiClient {
     }
 }
 
-// API для користувачів
 class UsersAPI extends ApiClient {
     constructor() {
         super();
@@ -79,7 +94,6 @@ class UsersAPI extends ApiClient {
     }
 }
 
-// API для робочих місць
 class WorkspacesAPI extends ApiClient {
     constructor() {
         super();
@@ -106,7 +120,6 @@ class WorkspacesAPI extends ApiClient {
     }
 }
 
-// API для бронювань
 class BookingsAPI extends ApiClient {
     constructor() {
         super();
@@ -143,7 +156,6 @@ class BookingsAPI extends ApiClient {
     }
 }
 
-// API для абонементів
 class SubscriptionsAPI extends ApiClient {
     constructor() {
         super();
@@ -179,8 +191,32 @@ class SubscriptionsAPI extends ApiClient {
     }
 }
 
-// Експортуємо екземпляри API
+class AuthAPI extends ApiClient {
+    constructor() {
+        super();
+    }
+
+    async login(credentials) {
+        // credentials: { email, password }
+        const response = await this.post('/auth/login', credentials);
+        return response; // Возвращает { token, user }
+    }
+
+    async register(userData) {
+        // userData: { full_name, email, password, phone }
+        const response = await this.post('/auth/register', userData);
+        return response;
+    }
+
+    logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.hash = '#login';
+    }
+}
+
 const api = {
+    auth: new AuthAPI(),
     users: new UsersAPI(),
     workspaces: new WorkspacesAPI(),
     bookings: new BookingsAPI(),
