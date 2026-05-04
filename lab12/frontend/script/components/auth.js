@@ -94,21 +94,24 @@ const AuthComponent = {
                     let response;
                     if (this.mode === 'login') {
                         response = await api.auth.login(formData);
-                        Toast.success('Вітаємо, ' + response.user.full_name);
+                        
+                        // ВАЖНО: данные лежат в response.data
+                        const { token, user } = response.data; 
+
+                        Toast.success('Вітаємо, ' + user.full_name);
+                        
+                        // Зберігаємо дані з вкладеного об'єкта data
+                        localStorage.setItem('token', token);
+                        localStorage.setItem('user', JSON.stringify(user));
+
+                        window.location.hash = '#dashboard';
                     } else {
+                        // Для регистрации сервер тоже возвращает { success: true, data: ... }
                         await api.auth.register(formData);
                         Toast.success('Реєстрація успішна! Тепер увійдіть.');
                         this.mode = 'login';
                         App.renderCurrentPage();
-                        return;
                     }
-
-                    // Зберігаємо токен (якщо API його повертає)
-                    localStorage.setItem('token', response.token);
-                    localStorage.setItem('user', JSON.stringify(response.user));
-
-                    // Перенаправляємо на дашборд
-                    window.location.hash = '#dashboard';
                 } catch (error) {
                     Toast.error('Помилка: ' + error.message);
                 }
